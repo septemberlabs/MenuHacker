@@ -1,5 +1,5 @@
 //
-//  ViewController.h
+//  MenuItems.h
 //  MenuHacker
 //
 //  Created by Will Smith on 3/28/15.
@@ -8,8 +8,6 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
-
+@interface MenuItems : UITableViewController <UIGestureRecognizerDelegate>
 
 @end
-
