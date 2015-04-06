@@ -6,12 +6,20 @@
 //  Copyright (c) 2015 Will Smith. All rights reserved.
 //
 
+/* TODO: What are best practices with respect to dictionary values. Should I check for nil using objectForKey before every usage? */
+
 #import "ABBYYClient.h"
 
+#pragma mark - Constants
 NSString * const baseURL = @"http://cloud.ocrsdk.com/";
 NSString * const processImageURLPath = @"processImage/";
+NSString * const getTaskStatusURLPath = @"getTaskStatus/";
 NSString * const applicationID = @"MenuHacker";
 NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
+
+@interface ABBYYClient ()
+@property (nonatomic, strong) NSMutableDictionary *task;
+@end
 
 @implementation ABBYYClient
 
@@ -39,6 +47,13 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     return self;
 }
 
+- (NSDictionary *)task {
+    if (!_task) {
+        _task = [[NSMutableDictionary alloc] init];
+    }
+    return _task;
+}
+
 - (void)setAuthentication
 {
     [self.requestSerializer setAuthorizationHeaderFieldWithUsername:applicationID password:password];
@@ -64,6 +79,7 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
 {
     NSLog(@"sendImageForProcessing called");
 
+    /*
     NSData *pngRepresentation = UIImagePNGRepresentation(imageToSend);
     NSLog(@"pngRepresentation size: %d", [pngRepresentation length]);
     NSData *jpgRepresentation1 = UIImageJPEGRepresentation(imageToSend, 0.1);
@@ -86,6 +102,8 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     NSLog(@"jpgRepresentation9 size: %d", [jpgRepresentation9 length]);
     NSData *jpgRepresentation10 = UIImageJPEGRepresentation(imageToSend, 1.0);
     NSLog(@"jpgRepresentation10 size: %d", [jpgRepresentation10 length]);
+     */
+    NSData *jpgRepresentation8 = UIImageJPEGRepresentation(imageToSend, 0.8);
     
     NSDictionary *params = [ABBYYClient processImageURLParams];
     NSLog(@"params: %@", [params description]);
@@ -111,15 +129,63 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     
 }
 
+// we're look for the tag element and use its attributes to load the self.task instance variable (a dictionary).
 - (void)parser:(NSXMLParser *)parser didStartElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qualifiedName attributes:(NSDictionary *)attributeDict
 {
     NSLog(@"didStartElement: %@", elementName);
     NSLog(@"attributes: %@", attributeDict);
+    
+    if ([elementName isEqualToString:@"task"]) {
+        if ([attributeDict objectForKey:@"id"]) [self.task setObject:[attributeDict objectForKey:@"id"] forKey:@"id"];
+        if ([attributeDict objectForKey:@"status"]) [self.task setObject:[attributeDict objectForKey:@"status"] forKey:@"status"];
+        if ([attributeDict objectForKey:@"error"]) [self.task setObject:[attributeDict objectForKey:@"error"] forKey:@"error"];
+        if ([attributeDict objectForKey:@"estimatedProcessingTime"]) [self.task setObject:[attributeDict objectForKey:@"estimatedProcessingTime"] forKey:@"estimatedProcessingTime"];
+        if ([attributeDict objectForKey:@"resultUrl"]) [self.task setObject:[attributeDict objectForKey:@"resultUrl"] forKey:@"resultUrl"];
+        if ([attributeDict objectForKey:@"description"]) [self.task setObject:[attributeDict objectForKey:@"description"] forKey:@"description"];
+    }
 }
 
-- (void)parser:(NSXMLParser *)parser didEndElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qName
+// once the XML response has been fully parsed, act upon the state of the task as extracted from the elements and attributes.
+- (void)parserDidEndDocument:(NSXMLParser *)parser
 {
-    NSLog(@"didEndElement: %@", elementName);
+    NSString *status = [self.task valueForKey:@"status"];
+    
+    // if the task is complete
+    if ([status isEqualToString:@"Completed"]) {
+        NSLog(@"task complete: %@", [self.task valueForKey:@"resultUrl1"]);
+    }
+    // if the task is in process, start the timer to check the status again once the time interval has elapsed
+    else if ([status isEqualToString:@"Submitted"] || [status isEqualToString:@"Queued"] || [status isEqualToString:@"InProgress"]) {
+        NSLog(@"task status: %@", status);
+        [NSTimer scheduledTimerWithTimeInterval:3.0
+                                         target:self
+                                       selector:@selector(checkImageProcessingStatus:)
+                                       userInfo:nil
+                                        repeats:NO];
+    }
+    // any other case
+    else {
+        NSLog(@"task status: %@", status);
+    }
+}
+
+- (void)checkImageProcessingStatus:(NSTimer *)timer
+{
+    NSDictionary *parameters = @{@"taskId": [self.task objectForKey:@"id"]};
+    
+    [self POST:getTaskStatusURLPath parameters:parameters
+     
+       success:^(NSURLSessionDataTask *task, id responseObject) {
+           if ([responseObject isMemberOfClass:[NSXMLParser class]]) {
+               NSXMLParser *xmlParser = (NSXMLParser *)responseObject;
+               xmlParser.delegate = self;
+               [xmlParser parse];
+           }
+       }
+     
+       failure:^(NSURLSessionDataTask *task, NSError *error) {
+           NSLog(@"Error: %@ ***** %@ ***** %@", task.originalRequest, task.response, error);
+       }];
 }
 
 @end

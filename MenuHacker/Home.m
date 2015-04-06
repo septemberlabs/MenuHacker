@@ -54,7 +54,7 @@
     cameraUI.mediaTypes = [NSArray arrayWithObject:(NSString *)kUTTypeImage];
     
     // Hides the controls for moving & scaling pictures, or for trimming movies. To instead show the controls, use YES.
-    cameraUI.allowsEditing = YES;
+    cameraUI.allowsEditing = NO;
     
     cameraUI.delegate = delegate;
     

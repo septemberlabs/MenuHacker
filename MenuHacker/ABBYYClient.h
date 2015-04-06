@@ -16,6 +16,7 @@
 
 extern NSString * const baseURL;
 extern NSString * const processImageURLPath;
+extern NSString * const getTaskStatusURLPath;
 + (NSDictionary *)processImageURLParams;
 extern NSString * const applicationID;
 extern NSString * const password;
