@@ -8,6 +8,19 @@
 
 /* TODO: What are best practices with respect to dictionary values. Should I check for nil using objectForKey before every usage? */
 
+/*****
+ 
+ * Save photo to phone.
+ * Parse output into a tableview.
+ * Allow selection of a saved photo.
+ * UI to navigate around.
+ * Display UI to indicate status to user.
+ * Allow user to cancel operation.
+ * Save passed look-ups (generated word lists and source photo).
+ * Add finger photo cropping.
+ 
+ *****/
+
 #import "ABBYYClient.h"
 
 #pragma mark - Constants
@@ -77,9 +90,6 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
 
 - (void)sendImageForProcessing:(UIImage *)imageToSend
 {
-    NSLog(@"sendImageForProcessing called");
-
-    /*
     NSData *pngRepresentation = UIImagePNGRepresentation(imageToSend);
     NSLog(@"pngRepresentation size: %d", [pngRepresentation length]);
     NSData *jpgRepresentation1 = UIImageJPEGRepresentation(imageToSend, 0.1);
@@ -102,20 +112,21 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     NSLog(@"jpgRepresentation9 size: %d", [jpgRepresentation9 length]);
     NSData *jpgRepresentation10 = UIImageJPEGRepresentation(imageToSend, 1.0);
     NSLog(@"jpgRepresentation10 size: %d", [jpgRepresentation10 length]);
-     */
-    NSData *jpgRepresentation8 = UIImageJPEGRepresentation(imageToSend, 0.8);
+
+    //NSData *jpgRepresentation8 = UIImageJPEGRepresentation(imageToSend, 0.8);
+    //NSLog(@"jpgRepresentation8 size: %lu", (unsigned long)[jpgRepresentation8 length]);
     
     NSDictionary *params = [ABBYYClient processImageURLParams];
-    NSLog(@"params: %@", [params description]);
+    //NSLog(@"params: %@", [params description]);
     
     [self POST:processImageURLPath parameters:[ABBYYClient processImageURLParams]
     
                     constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-                        [formData appendPartWithFileData:jpgRepresentation8 name:@"name.jpg" fileName:@"fileName.jpg" mimeType:@"image/jpg"];
+                        [formData appendPartWithFileData:jpgRepresentation3 name:@"name.jpg" fileName:@"fileName.jpg" mimeType:@"image/jpg"];
                     }
      
                     success:^(NSURLSessionDataTask *task, id responseObject) {
-                        NSLog(@"Success: %@ ***** %@ ***** %@", task.originalRequest, task.response, responseObject);
+                        //NSLog(@"Success: %@ ***** %@ ***** %@", task.originalRequest, task.response, responseObject);
                         if ([responseObject isMemberOfClass:[NSXMLParser class]]) {
                             NSXMLParser *xmlParser = (NSXMLParser *)responseObject;
                             xmlParser.delegate = self;
@@ -129,12 +140,10 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     
 }
 
-// we're look for the tag element and use its attributes to load the self.task instance variable (a dictionary).
+// we're looking for the tag element and use its attributes to load the self.task instance variable (a dictionary).
+// reference for the XML format: http://ocrsdk.com/documentation/specifications/status-codes/
 - (void)parser:(NSXMLParser *)parser didStartElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qualifiedName attributes:(NSDictionary *)attributeDict
 {
-    NSLog(@"didStartElement: %@", elementName);
-    NSLog(@"attributes: %@", attributeDict);
-    
     if ([elementName isEqualToString:@"task"]) {
         if ([attributeDict objectForKey:@"id"]) [self.task setObject:[attributeDict objectForKey:@"id"] forKey:@"id"];
         if ([attributeDict objectForKey:@"status"]) [self.task setObject:[attributeDict objectForKey:@"status"] forKey:@"status"];
@@ -152,7 +161,7 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
     
     // if the task is complete
     if ([status isEqualToString:@"Completed"]) {
-        NSLog(@"task complete: %@", [self.task valueForKey:@"resultUrl1"]);
+        NSLog(@"task complete: %@", [self.task valueForKey:@"resultUrl"]);
     }
     // if the task is in process, start the timer to check the status again once the time interval has elapsed
     else if ([status isEqualToString:@"Submitted"] || [status isEqualToString:@"Queued"] || [status isEqualToString:@"InProgress"]) {
@@ -173,7 +182,7 @@ NSString * const password = @"ID1jzRnS2PYPM3UsK5NJgaY4";
 {
     NSDictionary *parameters = @{@"taskId": [self.task objectForKey:@"id"]};
     
-    [self POST:getTaskStatusURLPath parameters:parameters
+    [self GET:getTaskStatusURLPath parameters:parameters
      
        success:^(NSURLSessionDataTask *task, id responseObject) {
            if ([responseObject isMemberOfClass:[NSXMLParser class]]) {

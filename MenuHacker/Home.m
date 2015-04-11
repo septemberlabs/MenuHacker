@@ -58,15 +58,15 @@
     
     cameraUI.delegate = delegate;
     
-    [controller presentViewController:cameraUI animated:YES completion:^(void){ NSLog(@"camera opened"); }];
+    [controller presentViewController:cameraUI animated:YES completion:nil];
 
     return YES;
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
 {
-    [self dismissViewControllerAnimated:YES completion:^(void){ NSLog(@"didFinishPickingMediaWithInfo"); }];
-    NSLog(@"image picker dump: %@", [info description]);
+    [self dismissViewControllerAnimated:YES completion:nil];
+    //NSLog(@"image picker dump: %@", [info description]);
     
     // if the UIImagePickerControllerEditedImage key exists, we use that image in case the user made edits. (this key will exist if the edit controls were visible whether or not the user actually made any edits.)
     if ([info objectForKey:@"UIImagePickerControllerEditedImage"]) {
